@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- default categories if internet is unreachable -->
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_tech"
+            android:title="@string/drawer_value_tech" />
+        <item
+            android:id="@+id/nav_books"
+            android:title="@string/drawer_value_books" />
+        <item
+            android:id="@+id/nav_games"
+            android:title="@string/drawer_value_games" />
+        <item
+            android:id="@+id/nav_podcast"
+            android:title="@string/drawer_value_pod" />
+    </group>
+
+</menu>

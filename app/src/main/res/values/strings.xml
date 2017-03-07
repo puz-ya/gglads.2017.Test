@@ -4,6 +4,17 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
+    <!-- NavigationView inside Drawer -->
+    <string name="drawer_header_image">Top Image</string>
+    <string name="author">Puzino Yury</string>
+    <string name="wrong_email">email@email.com</string>
+        <!-- default values -->
+    <string name="drawer_value_tech">Tech</string>
+    <string name="drawer_value_books">Books</string>
+    <string name="drawer_value_games">Games</string>
+    <string name="drawer_value_pod">Podcast</string>
+
+    <!-- Menu -->
     <string name="action_settings">Settings</string>
     <string name="action_close">Close</string>
 </resources>

@@ -32,9 +32,12 @@ public class Category {
 
     @Override
     public String toString() {
+        /*
         return String.format(Locale.getDefault(),
                 "[Category: id=%1$d, slug=%2$s, name=%3$s, color=%4$s, item_name=%5$s]",
                 id, slug, name, color, item_name);
+                */
+        return name;
     }
 
     public Long getId() {

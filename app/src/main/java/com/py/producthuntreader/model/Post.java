@@ -6,16 +6,26 @@ package com.py.producthuntreader.model;
 
 public class Post {
 
+    private Integer id;
     private String name;
     private String tagline;
     private Integer votes_count;
     private String thumbnail;
 
-    public Post(String name, String tagline, Integer votes_count, String thumbnail){
+    public Post(Integer id, String name, String tagline, Integer votes_count, String thumbnail){
+        this.id = id;
         this.name = name;
         this.tagline = tagline;
         this.votes_count = votes_count;
         this.thumbnail = thumbnail;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getName() {

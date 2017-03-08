@@ -30,11 +30,12 @@ public class ApiPostDeserializer implements JsonDeserializer<Post> {
             JsonObject array = json.getAsJsonObject();
 
             if (array.entrySet().size() > 0) {
+                Integer id = gson.fromJson(array.get("id"), Integer.class);
                 String name = gson.fromJson(array.get("name"), String.class);
                 String tagline = gson.fromJson(array.get("tagline"), String.class);
                 Integer votes = gson.fromJson(array.get("votes_count"), Integer.class);
                 String thumbnail = gson.fromJson(array.getAsJsonObject("thumbnail").get("image_url"), String.class);
-                post = new Post(name, tagline, votes, thumbnail);
+                post = new Post(id, name, tagline, votes, thumbnail);
             }
         }
 

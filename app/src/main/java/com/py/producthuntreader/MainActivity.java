@@ -18,6 +18,8 @@ import android.view.MenuItem;
 import android.widget.BaseAdapter;
 import android.widget.HeaderViewListAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -48,11 +50,14 @@ public class MainActivity extends AppCompatActivity
     Toolbar mToolbar;
     DrawerLayout mDrawer;
     NavigationView mNavigationView;
+    private ProgressBar mSpinner;
 
     OkHttpClient mClient = new OkHttpClient();
 
     Category[] mCategories = null;
     public Post[] mPosts = null;
+
+    private boolean mFlag = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +65,8 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
+
+        mSpinner = (ProgressBar)findViewById(R.id.progressBarMain);
 
         mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -89,7 +96,7 @@ public class MainActivity extends AppCompatActivity
         mNavigationView.setNavigationItemSelectedListener(this);
 
         getSiteCategories();
-        //getSitePosts("");
+        getSitePosts("", true);
     }
 
     @Override
@@ -133,31 +140,11 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        /*
-        if (id == R.id.nav_tech) {
-            // Handle the camera action
-        } else if (id == R.id.nav_books) {
+        mSpinner.setVisibility(View.VISIBLE);
 
-        } else if (id == R.id.nav_games) {
-
-        } else if (id == R.id.nav_podcast) {
-
-        }
-        //*/
         String title = item.getTitle().toString();
-        getSitePosts(title);
+        getSitePosts(title, true);
         mToolbar.setTitle(title);
-
-        Bundle bundle = new Bundle();
-        bundle.putString("cat_name",title);
-
-        Fragment fragment = new PostFragment();
-        fragment.setArguments(bundle);
-        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        ft.replace(R.id.content_frame, fragment);
-        ft.addToBackStack(null);
-        ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
-        ft.commit();
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -174,12 +161,19 @@ public class MainActivity extends AppCompatActivity
      * */
     public void getSiteCategories(){
 
+        mSpinner.setVisibility(View.VISIBLE);
         Request request = createCategoriesRequest();
 
         // Get a handler that can be used to post to the main thread
         mClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
+                    }
+                });
                 e.printStackTrace();
             }
 
@@ -191,7 +185,7 @@ public class MainActivity extends AppCompatActivity
 
                 // Read data on the worker thread
                 final String responseData = response.body().string();
-                Log.d(LOG_TAG, responseData);
+                //Log.d(LOG_TAG, responseData);
 
                 // Parsing JSON answer
                 Gson gson = new GsonBuilder().create();
@@ -207,19 +201,11 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void run() {
                         updateDrawer();
+                        mSpinner.setVisibility(View.GONE);
                     }
                 });
             }
         });
-
-
-        /**
-        if(mCategories != null && mCategories.length > 0) {
-            getSitePosts(mCategories[0].getName().toLowerCase());
-        }else{
-            getSitePosts("tech");
-        }
-        */
     }
 
     /** Set url and headers
@@ -267,18 +253,31 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /** get all topics in default [0] category (usually tech) */
-    public void getSitePosts(String categoryName){
+    /** get all topics in default [0] category (usually tech)
+     * @param categoryName - name of the category to retrieve posts from
+     * @param isUpdate - true if we want to update FrameLayout too, false - update Post Array only
+     * */
+    public void getSitePosts(String categoryName, final boolean isUpdate){
 
-        if(categoryName.isEmpty()){
+        mFlag = false;
+
+        if(categoryName == null || categoryName.isEmpty()){
             categoryName = "tech";
         }
+
+        mSpinner.setVisibility(View.VISIBLE);
         Request request = createPostListRequest(categoryName.toLowerCase());
 
         // Get a handler that can be used to post to the main thread
         mClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
+                    }
+                });
                 e.printStackTrace();
             }
 
@@ -290,7 +289,7 @@ public class MainActivity extends AppCompatActivity
 
                 // Read data on the worker thread (only 50 posts)
                 final String responseData = response.body().string();
-                Log.d(LOG_TAG, responseData);
+                //Log.d(LOG_TAG, responseData);
 
                 // Parsing JSON answer
                 Gson gson = new GsonBuilder()
@@ -302,13 +301,16 @@ public class MainActivity extends AppCompatActivity
                         .getAsJsonObject().getAsJsonArray("posts");
 
                 mPosts = gson.fromJson(jsonCategories, Post[].class);
+                mFlag = true;
 
                 // Run view-related code back on the main thread
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-
-                        updateMainFrame();
+                        if(isUpdate){
+                            updateMainFrame();
+                        }
+                        mSpinner.setVisibility(View.GONE);
                     }
                 });
             }
@@ -337,5 +339,21 @@ public class MainActivity extends AppCompatActivity
 
     public void updateMainFrame(){
 
+        String title = "tech";
+        if(mCategories != null && mCategories.length > 0){
+            title = mCategories[0].getName();
+        }
+
+        Bundle bundle = new Bundle();
+        bundle.putString("cat_name",title);
+
+        PostFragment fragment = new PostFragment();
+        fragment.setArguments(bundle);
+        fragment.setPosts(mPosts);
+        FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
+        ft.replace(R.id.content_frame, fragment);
+        ft.addToBackStack(null);
+        ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+        ft.commit();
     }
 }

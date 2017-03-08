@@ -1,6 +1,5 @@
 package com.py.producthuntreader;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -11,16 +10,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.NetworkImageView;
+import com.android.volley.toolbox.Volley;
 import com.py.producthuntreader.model.Post;
-import com.py.producthuntreader.model.PostLab;
+import com.py.producthuntreader.model.VolleySingleton;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -36,6 +36,8 @@ public class PostFragment extends Fragment {
     private OnListFragmentInteractionListener mListener;
 
     private String mCategoryTitle = "tech";
+
+    private Post[] mPosts;
 
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
@@ -75,8 +77,11 @@ public class PostFragment extends Fragment {
 
     /** get data, set new Adapter, insert in RecyclerView */
     private void updateUI(){
-        PostLab postLab = PostLab.get(mCategoryTitle);
-        List<Post> posts = postLab.getPosts();
+        if(mPosts == null){
+            return;
+        }
+
+        List<Post> posts = Arrays.asList(mPosts);
 
         if(mPostAdapter == null) {
             mPostAdapter = new PostRecyclerViewAdapter(posts, mListener);
@@ -85,6 +90,10 @@ public class PostFragment extends Fragment {
             //update
             mPostAdapter.notifyDataSetChanged();
         }
+    }
+
+    public void setPosts(Post[] posts){
+        mPosts = posts;
     }
 
     @Override
@@ -98,13 +107,8 @@ public class PostFragment extends Fragment {
      * fragment to allow an interaction in this fragment to be communicated
      * to the activity and potentially other fragments contained in that
      * activity.
-     * <p/>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnListFragmentInteractionListener {
-        // TODO: Update argument type and name
         void onListFragmentInteraction(Post post);
     }
 
@@ -123,9 +127,7 @@ public class PostFragment extends Fragment {
     }
 
     /** Holder class */
-    public class PostHolder extends RecyclerView.ViewHolder
-            //implements View.OnClickListener
-    {
+    public class PostHolder extends RecyclerView.ViewHolder {
 
         /** model */
         private View mView;
@@ -145,18 +147,7 @@ public class PostFragment extends Fragment {
             mNameView = (TextView) view.findViewById(R.id.post_title);
             mTagline = (TextView) view.findViewById(R.id.post_tagline);
             mVotes = (TextView)  view.findViewById(R.id.post_votes);
-
-            //view.setOnClickListener(this);
         }
-
-        /*
-        @Override
-        public void onClick(View view){
-            //here will be real onClick, not now.
-            //Toast.makeText(getActivity(), mItem.getName() + " clicked!", Toast.LENGTH_SHORT).show();
-            mListener.onListFragmentInteraction(view);
-        }
-        //*/
 
         @Override
         public String toString() {
@@ -185,18 +176,17 @@ public class PostFragment extends Fragment {
         @Override
         public void onBindViewHolder(final PostHolder holder, int position) {
             holder.mItem = mValues.get(position);
-            holder.mNameView.setText(mValues.get(position).getName());
-            holder.mTagline.setText(mValues.get(position).getName());
-            holder.mVotes.setText(mValues.get(position).getName());
+
+            String title = getString(R.string.holder_title) + " " + mValues.get(position).getName();
+            holder.mNameView.setText(title);
+            String tagline = getString(R.string.holder_tagline) + " " + mValues.get(position).getTagline();
+            holder.mTagline.setText(tagline);
+            String votes = getString(R.string.holder_votes) + " " + mValues.get(position).getVotes_count();
+            holder.mVotes.setText(votes);
 
             holder.mNetworkImageView.setDefaultImageResId(R.drawable.image_view_small_blank);
             holder.mNetworkImageView.setErrorImageResId(R.drawable.image_view_small_error);
-            ImageRequest ir = new ImageRequest(holder.mItem.getThumbnail(), new Response.Listener<Bitmap>() {
-                @Override
-                public void onResponse(Bitmap response) {
-                    holder.mNetworkImageView.setImageBitmap(response);
-                }
-            }, 0, 0, ImageView.ScaleType.CENTER_INSIDE, null, null);
+            holder.mNetworkImageView.setImageUrl(holder.mItem.getThumbnail(), VolleySingleton.getInstance().getImageLoader());
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override

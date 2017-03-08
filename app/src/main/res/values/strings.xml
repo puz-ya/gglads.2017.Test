@@ -17,4 +17,10 @@
     <!-- Menu -->
     <string name="action_settings">Settings</string>
     <string name="action_close">Close</string>
+
+    <!-- Holders -->
+    <string name="holder_title">Title: </string>
+    <string name="holder_tagline">Description: </string>
+    <string name="holder_votes">Votes: </string>
+
 </resources>

@@ -47,13 +47,9 @@ public class DetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
-        //mToolbar = (Toolbar) findViewById(R.id.toolbar);
-        //setSupportActionBar(mToolbar);
-        //mToolbar.setTitle(R.string.activity_toolbar);
-
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setTitle(getString(R.string.activity_toolbar));
+            actionBar.setTitle(getString(R.string.detail_toolbar));
         }
 
         Intent intent = getIntent();

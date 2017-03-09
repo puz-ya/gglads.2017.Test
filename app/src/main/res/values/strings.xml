@@ -24,7 +24,7 @@
     <string name="holder_votes">Votes: </string>
 
     <!-- Post Details -->
-    <string name="activity_toolbar">Details</string>
+    <string name="detail_toolbar">Details</string>
     <string name="detail_title">Title: </string>
     <string name="detail_tagline">Description: </string>
     <string name="detail_votes">Votes: </string>
@@ -38,5 +38,9 @@
     <string name="internet_permission_not_granted">Permission was not granted, aborting...</string>
     <string name="internet_enable_access">Please, check permissions for Internet access!</string>
 
+    <!-- Settings -->
+    <string name="settings_activity_status">On / Off</string>
+    <string name="settings_activity_description">Set this switch to start or stop Background Update Service.</string>
+    <string name="settings_toolbar">Settings</string>
 
 </resources>

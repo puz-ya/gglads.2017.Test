@@ -22,7 +22,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".DetailActivity"></activity>
+        <activity android:name=".DetailActivity" />
+        <activity android:name=".SettingsActivity" />
+
+        <service
+            android:name=".NewPostService"
+            android:enabled="true"
+            android:exported="false"
+            android:process=":Service"
+            >
+
+        </service>
     </application>
 
 </manifest>

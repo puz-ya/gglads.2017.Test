@@ -1,7 +1,10 @@
 package com.py.producthuntreader;
 
 import android.Manifest;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentTransaction;
@@ -54,6 +57,7 @@ public class MainActivity extends AppCompatActivity
     private ProgressBar mSpinner;
 
     private OkHttpClient mClient = new OkHttpClient();
+    private SharedPreferences mSharedPreferences;
 
     private Category[] mCategories = null;
     public Post[] mPosts = null;
@@ -64,6 +68,14 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
+
+        //check preferences for previous service status (on\off)
+        mSharedPreferences = getApplicationContext()
+                .getSharedPreferences(SettingsActivity.PREFERENCES_FILENAME, Context.MODE_PRIVATE);
+        if (mSharedPreferences.getBoolean("serviceOn", false)) {
+            Intent intent = new Intent(this, NewPostService.class);
+            ComponentName componentName = startService(intent); //componentName just for debug
+        }
 
         mSpinner = (ProgressBar) findViewById(R.id.progressBarMain);
 
@@ -131,6 +143,8 @@ public class MainActivity extends AppCompatActivity
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             // will start new SettingsActivity for Service stop\start
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
             return true;
         } else if (id == R.id.action_close) {
             finish();

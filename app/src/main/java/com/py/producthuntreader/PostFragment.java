@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -32,6 +33,8 @@ import java.util.List;
 public class PostFragment extends Fragment {
 
     private RecyclerView mPostRecyclerView;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
+
     private PostRecyclerViewAdapter mPostAdapter;
     private OnListFragmentInteractionListener mListener;
 
@@ -72,6 +75,15 @@ public class PostFragment extends Fragment {
         //set new data to Adapter and update RecyclerView
         updateUI();
 
+        mSwipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeContainer);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                // Refresh items
+                refreshItems();
+            }
+        });
+
         return view;
     }
 
@@ -102,11 +114,7 @@ public class PostFragment extends Fragment {
         updateUI();
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
+    /** Interaction with activity
      */
     public interface OnListFragmentInteractionListener {
         void onListFragmentInteraction(Post post);
@@ -122,7 +130,7 @@ public class PostFragment extends Fragment {
             mListener = (OnListFragmentInteractionListener) context;
         } catch (ClassCastException e) {
             throw new ClassCastException(context.toString()
-                    + " must implement OnHeadlineSelectedListener");
+                    + " must implement OnListFragmentInteractionListener");
         }
     }
 

@@ -8,7 +8,7 @@
     <string name="drawer_header_image">Top Image</string>
     <string name="author">Puzino Yury</string>
     <string name="wrong_email">email@email.com</string>
-        <!-- default values -->
+    <!-- default values -->
     <string name="drawer_value_tech">Tech</string>
     <string name="drawer_value_books">Books</string>
     <string name="drawer_value_games">Games</string>
@@ -22,5 +22,21 @@
     <string name="holder_title">Title: </string>
     <string name="holder_tagline">Description: </string>
     <string name="holder_votes">Votes: </string>
+
+    <!-- Post Details -->
+    <string name="activity_toolbar">Details</string>
+    <string name="detail_title">Title: </string>
+    <string name="detail_tagline">Description: </string>
+    <string name="detail_votes">Votes: </string>
+
+    <string name="detail_error">Parsing error! Sorry. </string>
+
+    <string name="button_get_it">Get It!</string>
+
+    <!-- Permissions -->
+    <string name="internet_permission_granted">Permission was granted, thank you!</string>
+    <string name="internet_permission_not_granted">Permission was not granted, aborting...</string>
+    <string name="internet_enable_access">Please, check permissions for Internet access!</string>
+
 
 </resources>

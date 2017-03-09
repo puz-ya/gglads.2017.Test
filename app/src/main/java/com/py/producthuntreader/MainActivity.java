@@ -1,10 +1,12 @@
 package com.py.producthuntreader;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentTransaction;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.util.Log;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.Gravity;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -44,20 +46,18 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
                     PostFragment.OnListFragmentInteractionListener{
 
-    private String TOKEN = "";
+    public static final String TOKEN = "";
+    private static final int INITIAL_REQUEST_4INTERNET = 10101;
 
-    private static final String LOG_TAG = "MainActivity: ";
-    Toolbar mToolbar;
-    DrawerLayout mDrawer;
-    NavigationView mNavigationView;
+    private Toolbar mToolbar;
+    private DrawerLayout mDrawer;
+    private NavigationView mNavigationView;
     private ProgressBar mSpinner;
 
     OkHttpClient mClient = new OkHttpClient();
 
     Category[] mCategories = null;
     public Post[] mPosts = null;
-
-    private boolean mFlag = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity
         mNavigationView.setNavigationItemSelectedListener(this);
 
         getSiteCategories();
-        getSitePosts("", true);
+        getSitePosts("");
     }
 
     @Override
@@ -143,8 +143,9 @@ public class MainActivity extends AppCompatActivity
         mSpinner.setVisibility(View.VISIBLE);
 
         String title = item.getTitle().toString();
-        getSitePosts(title, true);
         mToolbar.setTitle(title);
+        //update all
+        getSitePosts(title);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
@@ -154,58 +155,96 @@ public class MainActivity extends AppCompatActivity
     public void onListFragmentInteraction(Post post) {
         // The user selected the headline of an article from the HeadlinesFragment
         // Do something here to display that article
-        Intent intent = new Intent();
+        Intent intent = new Intent(this, DetailActivity.class);
+        intent.putExtra(DetailActivity.EXTRA_DETAIL, post.getId());
+        startActivity(intent);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case INITIAL_REQUEST_4INTERNET: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    // permission was granted, yay! Do the task you need to do.
+                    Toast.makeText(this, getString(R.string.internet_permission_granted), Toast.LENGTH_SHORT).show();
+
+                } else {
+
+                    // permission denied! Disable the functionality that depends on this.
+                    Toast.makeText(this, getString(R.string.internet_permission_not_granted), Toast.LENGTH_SHORT).show();
+                    finish();
+                }
+            }
+
+            // other 'case' lines to check for other permissions
+        }
     }
 
     /** Get list of categories from site and insert into Drawer
      * */
     public void getSiteCategories(){
 
-        mSpinner.setVisibility(View.VISIBLE);
-        Request request = createCategoriesRequest();
+        //checking permissions (API 21+)
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
 
-        // Get a handler that can be used to post to the main thread
-        mClient.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
-                    }
-                });
-                e.printStackTrace();
-            }
+            ActivityCompat.requestPermissions(
+                    MainActivity.this,
+                    new String[] {Manifest.permission.INTERNET},
+                    INITIAL_REQUEST_4INTERNET
+            );
 
-            @Override
-            public void onResponse(Call call, final Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Unexpected code " + response);
+            Toast.makeText(this, getString(R.string.internet_enable_access), Toast.LENGTH_SHORT).show();
+        }else {
+
+            mSpinner.setVisibility(View.VISIBLE);
+            Request request = createCategoriesRequest();
+
+            // Get a handler that can be used to post to the main thread
+            mClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    e.printStackTrace();
                 }
 
-                // Read data on the worker thread
-                final String responseData = response.body().string();
-                //Log.d(LOG_TAG, responseData);
-
-                // Parsing JSON answer
-                Gson gson = new GsonBuilder().create();
-
-                JsonParser jsonParser = new JsonParser();
-                JsonArray jsonCategories = jsonParser.parse(responseData)
-                        .getAsJsonObject().getAsJsonArray("categories");
-
-                mCategories = gson.fromJson(jsonCategories, Category[].class);
-
-                // Run view-related code back on the main thread
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        updateDrawer();
-                        mSpinner.setVisibility(View.GONE);
+                @Override
+                public void onResponse(Call call, final Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected code " + response);
                     }
-                });
-            }
-        });
+
+                    // Read data on the worker thread
+                    final String responseData = response.body().string();
+                    //Log.d(LOG_TAG, responseData);
+
+                    // Parsing JSON answer
+                    Gson gson = new GsonBuilder().create();
+
+                    JsonParser jsonParser = new JsonParser();
+                    JsonArray jsonCategories = jsonParser.parse(responseData)
+                            .getAsJsonObject().getAsJsonArray("categories");
+
+                    mCategories = gson.fromJson(jsonCategories, Category[].class);
+
+                    // Run view-related code back on the main thread
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateDrawer();
+                            mSpinner.setVisibility(View.GONE);
+                        }
+                    });
+                }
+            });
+        }
     }
 
     /** Set url and headers
@@ -255,67 +294,73 @@ public class MainActivity extends AppCompatActivity
 
     /** get all topics in default [0] category (usually tech)
      * @param categoryName - name of the category to retrieve posts from
-     * @param isUpdate - true if we want to update FrameLayout too, false - update Post Array only
+     * //@param isUpdate - true if we want to update FrameLayout too, false - update Post Array only
      * */
-    public void getSitePosts(String categoryName, final boolean isUpdate){
-
-        mFlag = false;
+    public void getSitePosts(String categoryName){
 
         if(categoryName == null || categoryName.isEmpty()){
             categoryName = "tech";
         }
 
-        mSpinner.setVisibility(View.VISIBLE);
-        Request request = createPostListRequest(categoryName.toLowerCase());
+        //checking permissions (API 21+)
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
 
-        // Get a handler that can be used to post to the main thread
-        mClient.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
-                    }
-                });
-                e.printStackTrace();
-            }
+            ActivityCompat.requestPermissions(
+                    MainActivity.this,
+                    new String[] {Manifest.permission.INTERNET},
+                    INITIAL_REQUEST_4INTERNET
+            );
 
-            @Override
-            public void onResponse(Call call, final Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    throw new IOException("Unexpected code " + response);
+            Toast.makeText(this, getString(R.string.internet_enable_access), Toast.LENGTH_SHORT).show();
+        }else {
+
+            mSpinner.setVisibility(View.VISIBLE);
+            Request request = createPostListRequest(categoryName.toLowerCase());
+
+            // Get a handler that can be used to post to the main thread
+            mClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    e.printStackTrace();
                 }
 
-                // Read data on the worker thread (only 50 posts)
-                final String responseData = response.body().string();
-                //Log.d(LOG_TAG, responseData);
+                @Override
+                public void onResponse(Call call, final Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected code " + response);
+                    }
 
-                // Parsing JSON answer
-                Gson gson = new GsonBuilder()
-                        .registerTypeAdapter(Post.class, new ApiPostDeserializer())
-                        .create();
+                    // Read data on the worker thread (only 50 posts)
+                    final String responseData = response.body().string();
+                    //Log.d(LOG_TAG, responseData);
 
-                JsonParser jsonParser = new JsonParser();
-                JsonArray jsonCategories = jsonParser.parse(responseData)
-                        .getAsJsonObject().getAsJsonArray("posts");
+                    // Parsing JSON answer
+                    Gson gson = new GsonBuilder()
+                            .registerTypeAdapter(Post.class, new ApiPostDeserializer())
+                            .create();
 
-                mPosts = gson.fromJson(jsonCategories, Post[].class);
-                mFlag = true;
+                    JsonParser jsonParser = new JsonParser();
+                    JsonArray jsonCategories = jsonParser.parse(responseData)
+                            .getAsJsonObject().getAsJsonArray("posts");
 
-                // Run view-related code back on the main thread
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if(isUpdate){
+                    mPosts = gson.fromJson(jsonCategories, Post[].class);
+
+                    // Run view-related code back on the main thread
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
                             updateMainFrame();
                         }
-                        mSpinner.setVisibility(View.GONE);
-                    }
-                });
-            }
-        });
-
+                    });
+                }
+            });
+        }
     }
 
     public Request createPostListRequest(String categoryName){
@@ -355,5 +400,7 @@ public class MainActivity extends AppCompatActivity
         ft.addToBackStack(null);
         ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
         ft.commit();
+
+        mSpinner.setVisibility(View.GONE);
     }
 }

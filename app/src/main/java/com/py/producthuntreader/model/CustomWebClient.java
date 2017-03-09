@@ -27,8 +27,11 @@ public class CustomWebClient extends WebViewClient {
         return handleUri(uri);
     }
 
+    /** Returning false means that you are going to load this url in the webView itself.
+     * @param uri - useless
+     * @return false - want to view webpages only in webview, no redirections to browser
+     * */
     private boolean handleUri(final Uri uri) {
-        // Returning false means that you are going to load this url in the webView itself
         return false;
     }
 }

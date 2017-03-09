@@ -19,7 +19,7 @@ public class MyApplication extends Application {
         this.setAppContext(getApplicationContext());
     }
 
-    public MyApplication getInstance(){
+    public MyApplication getInstance() {
         return mInstance;
     }
     public static Context getAppContext() {

@@ -1,7 +1,6 @@
 package com.py.producthuntreader;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -10,14 +9,9 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.NetworkImageView;
-import com.android.volley.toolbox.Volley;
 import com.py.producthuntreader.model.Post;
 import com.py.producthuntreader.model.VolleySingleton;
 
@@ -25,10 +19,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * A fragment representing a list of Items.
- * <p/>
+ * A fragment representing a list of Posts.
  * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
- * interface.
  */
 public class PostFragment extends Fragment {
 
@@ -59,65 +51,66 @@ public class PostFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_post_list, container, false);
 
+        mSwipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeContainer);
+        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                // Refresh items
+                if (mListener != null) {
+                    mListener.onListSwipeUpdate();
+                }
+            }
+        });
+
         mPostRecyclerView = (RecyclerView) view.findViewById(R.id.post_recycle_list);
         //after creation we must set LayoutManager
         mPostRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
 
-        if(savedInstanceState != null){
-            //
-        }
-
         Bundle bundle = getArguments();
-        if(bundle != null) {
+        if (bundle != null) {
             mCategoryTitle = bundle.getString("cat_name");
         }
 
         //set new data to Adapter and update RecyclerView
         updateUI();
 
-        mSwipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeContainer);
-        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                // Refresh items
-                refreshItems();
-            }
-        });
-
         return view;
     }
 
-    /** get data, set new Adapter, insert in RecyclerView */
-    private void updateUI(){
-        if(mPosts == null){
+    /** get data, set new Adapter, insert in RecyclerView. */
+    public void updateUI() {
+        if (mPosts == null) {
             return;
         }
 
         List<Post> posts = Arrays.asList(mPosts);
 
-        if(mPostAdapter == null) {
+        if (mPostAdapter == null) {
             mPostAdapter = new PostRecyclerViewAdapter(posts, mListener);
             mPostRecyclerView.setAdapter(mPostAdapter);
-        }else{
+        } else {
             //update
             mPostAdapter.notifyDataSetChanged();
         }
+        //if was swipe
+        mSwipeRefreshLayout.setRefreshing(false);
     }
 
-    public void setPosts(Post[] posts){
+    public void setPosts(Post[] posts) {
         mPosts = posts;
     }
 
     @Override
-    public void onResume(){
+    public void onResume() {
         super.onResume();
         updateUI();
     }
 
-    /** Interaction with activity
+    /** Interaction with activity.
      */
     public interface OnListFragmentInteractionListener {
         void onListFragmentInteraction(Post post);
+        void onListSwipeUpdate();
     }
 
     @Override
@@ -132,15 +125,16 @@ public class PostFragment extends Fragment {
             throw new ClassCastException(context.toString()
                     + " must implement OnListFragmentInteractionListener");
         }
+
     }
 
-    /** Holder class */
+    /** Holder class. */
     public class PostHolder extends RecyclerView.ViewHolder {
 
-        /** model */
+        /** model. */
         private View mView;
 
-        /** views */
+        /** views. */
         private NetworkImageView mNetworkImageView;
         private TextView mNameView;
         private TextView mTagline;
@@ -187,7 +181,7 @@ public class PostFragment extends Fragment {
 
             String title = getString(R.string.holder_title) + " " + mValues.get(position).getName();
             holder.mNameView.setText(title);
-            String tagline = getString(R.string.holder_tagline) + " " + mValues.get(position).getTagline();
+            String tagline = mValues.get(position).getTagline().substring(0,20) + "...";
             holder.mTagline.setText(tagline);
             String votes = getString(R.string.holder_votes) + " " + mValues.get(position).getVotes_count();
             holder.mVotes.setText(votes);

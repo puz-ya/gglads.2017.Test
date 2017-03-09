@@ -6,7 +6,6 @@ import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentTransaction;
 import android.os.Bundle;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.view.Gravity;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -32,8 +31,6 @@ import com.py.producthuntreader.model.Category;
 import com.py.producthuntreader.model.Post;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -44,19 +41,21 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
-                    PostFragment.OnListFragmentInteractionListener{
+                    PostFragment.OnListFragmentInteractionListener {
 
     public static final String TOKEN = "";
     private static final int INITIAL_REQUEST_4INTERNET = 10101;
+    private static final String FRAGMENT_POSTS_TAG = "POSTS_TAG";
+    private static final String EXTRA_CATEG_NAME = "CATEG_NAME";
 
     private Toolbar mToolbar;
     private DrawerLayout mDrawer;
     private NavigationView mNavigationView;
     private ProgressBar mSpinner;
 
-    OkHttpClient mClient = new OkHttpClient();
+    private OkHttpClient mClient = new OkHttpClient();
 
-    Category[] mCategories = null;
+    private Category[] mCategories = null;
     public Post[] mPosts = null;
 
     @Override
@@ -66,18 +65,18 @@ public class MainActivity extends AppCompatActivity
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
 
-        mSpinner = (ProgressBar)findViewById(R.id.progressBarMain);
+        mSpinner = (ProgressBar) findViewById(R.id.progressBarMain);
 
         mDrawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, mDrawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close){
+                this, mDrawer, mToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close) {
 
-            public void onDrawerOpened(View view){
+            public void onDrawerOpened(View view) {
                 super.onDrawerOpened(view);
                 invalidateOptionsMenu();
             }
 
-            public void onDrawerClosed(View view){
+            public void onDrawerClosed(View view) {
                 super.onDrawerClosed(view);
                 invalidateOptionsMenu();
             }
@@ -95,8 +94,14 @@ public class MainActivity extends AppCompatActivity
         mNavigationView = (NavigationView) findViewById(R.id.nav_view);
         mNavigationView.setNavigationItemSelectedListener(this);
 
+        //get categories and posts
         getSiteCategories();
-        getSitePosts("");
+
+        String savedCategoryName = "";
+        if (savedInstanceState != null) {
+            savedCategoryName = savedInstanceState.getString(EXTRA_CATEG_NAME);
+        }
+        getSitePosts(savedCategoryName);
     }
 
     @Override
@@ -127,7 +132,7 @@ public class MainActivity extends AppCompatActivity
         if (id == R.id.action_settings) {
             // will start new SettingsActivity for Service stop\start
             return true;
-        } else if (id == R.id.action_close){
+        } else if (id == R.id.action_close) {
             finish();
         }
 
@@ -152,12 +157,19 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    /** The user selected post from the Fragment.
+     * @param post - start new Detail activity with post data
+     * */
     public void onListFragmentInteraction(Post post) {
-        // The user selected the headline of an article from the HeadlinesFragment
-        // Do something here to display that article
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(DetailActivity.EXTRA_DETAIL, post.getId());
         startActivity(intent);
+    }
+
+    /** user made a swipe - update Posts[].
+     * */
+    public void onListSwipeUpdate() {
+        getUpdatePosts(mToolbar.getTitle().toString());
     }
 
     @Override
@@ -165,8 +177,7 @@ public class MainActivity extends AppCompatActivity
         switch (requestCode) {
             case INITIAL_REQUEST_4INTERNET: {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                     // permission was granted, yay! Do the task you need to do.
                     Toast.makeText(this, getString(R.string.internet_permission_granted), Toast.LENGTH_SHORT).show();
@@ -183,9 +194,29 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /** Get list of categories from site and insert into Drawer
+    /** Set url and headers.
      * */
-    public void getSiteCategories(){
+    public Request createCategoriesRequest() {
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://api.producthunt.com/v1/categories").newBuilder();
+        urlBuilder.addQueryParameter("access_token", TOKEN);
+        String url = urlBuilder.build().toString();
+
+        // Add headers
+        Request request = new Request.Builder()
+                .addHeader("Accept", "application/json")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "bearer " + TOKEN)
+                .addHeader("Host", "api.producthunt.com")
+                .url(url)
+                .build();
+
+        return request;
+    }
+
+    /** Get list of categories from site and insert into Drawer.
+     * */
+    public void getSiteCategories() {
 
         //checking permissions (API 21+)
         if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
@@ -197,7 +228,7 @@ public class MainActivity extends AppCompatActivity
             );
 
             Toast.makeText(this, getString(R.string.internet_enable_access), Toast.LENGTH_SHORT).show();
-        }else {
+        } else {
 
             mSpinner.setVisibility(View.VISIBLE);
             Request request = createCategoriesRequest();
@@ -239,7 +270,6 @@ public class MainActivity extends AppCompatActivity
                         @Override
                         public void run() {
                             updateDrawer();
-                            mSpinner.setVisibility(View.GONE);
                         }
                     });
                 }
@@ -247,34 +277,18 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    /** Set url and headers
+    /** Updating Drawer elements and adapter.
      * */
-    public Request createCategoriesRequest(){
+    public void updateDrawer() {
 
-        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://api.producthunt.com/v1/categories").newBuilder();
-        urlBuilder.addQueryParameter("access_token", TOKEN);
-        String url = urlBuilder.build().toString();
-
-        // Add headers
-        Request request = new Request.Builder()
-                .addHeader("Accept", "application/json")
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "bearer " + TOKEN)
-                .addHeader("Host", "api.producthunt.com")
-                .url(url)
-                .build();
-
-        return request;
-    }
-
-    /** Updating Drawer elements and adapter
-     * */
-    public void updateDrawer(){
-
-        if(mCategories.length <= 0){
+        if (mCategories.length <= 0) {
             return;
         }
 
+        //set toolbar name
+        mToolbar.setTitle(mCategories[0].getName());
+
+        //set drawer menu
         Menu menu = mNavigationView.getMenu();
         menu.clear();
         for (Category category : mCategories) {
@@ -290,15 +304,42 @@ public class MainActivity extends AppCompatActivity
                 wrapped.notifyDataSetChanged();
             }
         }
+        //hide spinner
+        mSpinner.setVisibility(View.GONE);
     }
 
-    /** get all topics in default [0] category (usually tech)
-     * @param categoryName - name of the category to retrieve posts from
-     * //@param isUpdate - true if we want to update FrameLayout too, false - update Post Array only
+    /** Request for List of Post.
+     * @param categoryName - name of the selected category (Name inside Toolbar title)
+     * @return Request
      * */
-    public void getSitePosts(String categoryName){
+    public Request createPostListRequest(String categoryName) {
 
-        if(categoryName == null || categoryName.isEmpty()){
+        //HttpUrl.Builder urlBuilder = HttpUrl.parse("https://api.producthunt.com/v1/posts/all").newBuilder();
+        //urlBuilder.addQueryParameter("search[category]", categoryName);
+
+        String urlAPI = "https://api.producthunt.com/v1/categories/" + categoryName.toLowerCase() + "/posts";
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(urlAPI).newBuilder();
+        urlBuilder.addQueryParameter("access_token", TOKEN);
+        String url = urlBuilder.build().toString();
+
+        // Add headers
+        Request request = new Request.Builder()
+                .addHeader("Accept", "application/json")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "bearer " + TOKEN)
+                .addHeader("Host", "api.producthunt.com")
+                .url(url)
+                .build();
+
+        return request;
+    }
+
+    /** get all topics in default [0] category (usually tech).
+     * @param categoryName - name of the category to retrieve posts from
+     * */
+    public void getSitePosts(String categoryName) {
+
+        if (categoryName == null || categoryName.isEmpty()) {
             categoryName = "tech";
         }
 
@@ -312,7 +353,7 @@ public class MainActivity extends AppCompatActivity
             );
 
             Toast.makeText(this, getString(R.string.internet_enable_access), Toast.LENGTH_SHORT).show();
-        }else {
+        } else {
 
             mSpinner.setVisibility(View.VISIBLE);
             Request request = createPostListRequest(categoryName.toLowerCase());
@@ -363,44 +404,100 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    public Request createPostListRequest(String categoryName){
+    public void updateMainFrame() {
 
-        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://api.producthunt.com/v1/posts/all").newBuilder();
-        urlBuilder.addQueryParameter("search[category]", categoryName);
-        urlBuilder.addQueryParameter("access_token", TOKEN);
-        String url = urlBuilder.build().toString();
-
-        // Add headers
-        Request request = new Request.Builder()
-                .addHeader("Accept", "application/json")
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "bearer " + TOKEN)
-                .addHeader("Host", "api.producthunt.com")
-                .url(url)
-                .build();
-
-        return request;
-    }
-
-    public void updateMainFrame(){
-
-        String title = "tech";
-        if(mCategories != null && mCategories.length > 0){
-            title = mCategories[0].getName();
-        }
+        String title = mToolbar.getTitle().toString();
 
         Bundle bundle = new Bundle();
-        bundle.putString("cat_name",title);
+        bundle.putString("cat_name", title);
 
         PostFragment fragment = new PostFragment();
         fragment.setArguments(bundle);
         fragment.setPosts(mPosts);
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
-        ft.replace(R.id.content_frame, fragment);
+        ft.replace(R.id.content_frame, fragment, FRAGMENT_POSTS_TAG);
         ft.addToBackStack(null);
         ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
         ft.commit();
 
         mSpinner.setVisibility(View.GONE);
+    }
+
+    /** Update fragment content (bad way).
+     * @param categoryName - name of the category to retrieve posts from
+     * */
+    public void getUpdatePosts(String categoryName) {
+
+        if (categoryName == null || categoryName.isEmpty()) {
+            categoryName = "tech";
+        }
+
+        //checking permissions (API 21+)
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(
+                    MainActivity.this,
+                    new String[] {Manifest.permission.INTERNET},
+                    INITIAL_REQUEST_4INTERNET
+            );
+
+            Toast.makeText(this, getString(R.string.internet_enable_access), Toast.LENGTH_SHORT).show();
+        } else {
+
+            Request request = createPostListRequest(categoryName.toLowerCase());
+
+            // Get a handler that can be used to post to the main thread
+            mClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Connection Error", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    e.printStackTrace();
+                }
+
+                @Override
+                public void onResponse(Call call, final Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected code " + response);
+                    }
+
+                    // Read data on the worker thread (only 50 posts)
+                    final String responseData = response.body().string();
+                    //Log.d(LOG_TAG, responseData);
+
+                    // Parsing JSON answer
+                    Gson gson = new GsonBuilder()
+                            .registerTypeAdapter(Post.class, new ApiPostDeserializer())
+                            .create();
+
+                    JsonParser jsonParser = new JsonParser();
+                    JsonArray jsonCategories = jsonParser.parse(responseData)
+                            .getAsJsonObject().getAsJsonArray("posts");
+
+                    mPosts = gson.fromJson(jsonCategories, Post[].class);
+
+                    // Run view-related code back on the main thread
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            PostFragment fragment = (PostFragment) getSupportFragmentManager().findFragmentByTag(FRAGMENT_POSTS_TAG);
+                            fragment.setPosts(mPosts);
+                            fragment.updateUI();
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        savedInstanceState.putString(EXTRA_CATEG_NAME, mToolbar.getTitle().toString());
+        // Always call the superclass so it can save the view hierarchy state
+        super.onSaveInstanceState(savedInstanceState);
     }
 }

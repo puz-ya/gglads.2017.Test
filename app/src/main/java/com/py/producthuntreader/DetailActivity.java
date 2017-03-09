@@ -5,13 +5,9 @@ import android.content.Intent;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,12 +34,13 @@ public class DetailActivity extends AppCompatActivity {
 
     private ProgressDialog mProgressDialog;
 
-    OkHttpClient mClient = new OkHttpClient();
+    private OkHttpClient mClient = new OkHttpClient();
 
     private Integer mId = 1;
     public static final String EXTRA_DETAIL = "POST_ID";
     public static final String SAVE_POST = "POST_CLASS";
-    PostDetails mPostDetails;
+
+    private PostDetails mPostDetails;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,27 +52,28 @@ public class DetailActivity extends AppCompatActivity {
         //mToolbar.setTitle(R.string.activity_toolbar);
 
         ActionBar actionBar = getSupportActionBar();
-        if(actionBar != null){
+        if (actionBar != null) {
             actionBar.setTitle(getString(R.string.activity_toolbar));
         }
 
         Intent intent = getIntent();
-        if(intent != null) {
+        if (intent != null) {
             mId = intent.getIntExtra(EXTRA_DETAIL, 1);
         }
 
-        if(savedInstanceState != null){
+        if (savedInstanceState != null) {
             mId = savedInstanceState.getInt(EXTRA_DETAIL);
             mPostDetails = (PostDetails) savedInstanceState.getSerializable(SAVE_POST);
             updateDetailView();
-        }else {
+        } else {
             getDetails();
         }
     }
 
-    /** Set url and headers
+    /** Set url and headers.
+     * @return Request for OkHttp.
      * */
-    public Request createDetailsRequest(){
+    public Request createDetailsRequest() {
 
         HttpUrl.Builder urlBuilder = HttpUrl.parse("https://api.producthunt.com/v1/posts/" + mId).newBuilder();
         urlBuilder.addQueryParameter("access_token", MainActivity.TOKEN);
@@ -93,7 +91,7 @@ public class DetailActivity extends AppCompatActivity {
         return request;
     }
 
-    public void getDetails(){
+    public void getDetails() {
 
         mProgressDialog = ProgressDialog.show(DetailActivity.this, "", "Getting Post data...");
         Request request = createDetailsRequest();
@@ -144,9 +142,9 @@ public class DetailActivity extends AppCompatActivity {
         });
     }
 
-    public void updateDetailView(){
+    public void updateDetailView() {
 
-        if(mPostDetails == null){
+        if (mPostDetails == null) {
             TextView tvTitle = (TextView) findViewById(R.id.detail_title);
             tvTitle.setText(getString(R.string.detail_error));
             return;

@@ -1,14 +1,12 @@
 package com.py.producthuntreader.model;
 
-import java.util.Locale;
-
 /**
  * Created by Puzino Yury on 07.03.2017.
  */
 
 public class Category {
 
-    /** From API
+    /** From API.
      * "id" : 1,
      * "slug" : "tech",
      * "name" : "Tech",
@@ -22,7 +20,7 @@ public class Category {
     private String color;
     private String item_name;
 
-    public Category(Long id, String slug, String name, String color, String item_name){
+    public Category(Long id, String slug, String name, String color, String item_name) {
         this.id = id;
         this.slug = slug;
         this.name = name;
